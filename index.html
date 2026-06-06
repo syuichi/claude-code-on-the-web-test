@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>訪問記録</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #f5f5f5; color: #333; }
+
+    header {
+      background: #4a7c59;
+      color: white;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { font-size: 1.2rem; }
+
+    .container { max-width: 640px; margin: 0 auto; padding: 16px; }
+
+    button {
+      background: #4a7c59;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover { background: #3a6348; }
+    button.secondary {
+      background: #999;
+    }
+    button.secondary:hover { background: #777; }
+    button.danger {
+      background: #c0392b;
+    }
+
+    .form-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .form-card h2 { margin-bottom: 16px; font-size: 1rem; color: #555; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 4px; }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    .form-group textarea { height: 80px; resize: vertical; }
+    .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+
+    .record-list { display: flex; flex-direction: column; gap: 12px; }
+    .record-card {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .record-card .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .record-card .producer { font-weight: bold; font-size: 1rem; }
+    .record-card .date { font-size: 0.8rem; color: #888; }
+    .record-card .crop {
+      display: inline-block;
+      background: #e8f5e9;
+      color: #4a7c59;
+      font-size: 0.8rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+    }
+    .record-card .memo { font-size: 0.9rem; color: #555; white-space: pre-wrap; }
+    .record-card .photo-preview {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .record-card .photo-preview img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    .record-card .actions { margin-top: 10px; display: flex; justify-content: flex-end; }
+
+    .empty { text-align: center; color: #aaa; padding: 40px 0; }
+
+    #new-btn { margin-bottom: 16px; width: 100%; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>農家訪問記録</h1>
+  </header>
+
+  <div class="container">
+    <button id="new-btn">＋ 新しい訪問を記録</button>
+
+    <div class="form-card" id="form-section" style="display:none;">
+      <h2 id="form-title">訪問記録を追加</h2>
+      <div class="form-group">
+        <label>生産者名</label>
+        <input type="text" id="f-producer" placeholder="例：田中農園">
+      </div>
+      <div class="form-group">
+        <label>農場名</label>
+        <input type="text" id="f-farm" placeholder="例：田中農場 第2圃場">
+      </div>
+      <div class="form-group">
+        <label>訪問日時</label>
+        <input type="datetime-local" id="f-date">
+      </div>
+      <div class="form-group">
+        <label>作物・品目</label>
+        <input type="text" id="f-crop" placeholder="例：トマト、イチゴ">
+      </div>
+      <div class="form-group">
+        <label>メモ・所見</label>
+        <textarea id="f-memo" placeholder="気づいたこと、相談内容など"></textarea>
+      </div>
+      <div class="form-group">
+        <label>写真</label>
+        <input type="file" id="f-photos" accept="image/*" multiple>
+      </div>
+      <div class="form-actions">
+        <button class="secondary" id="cancel-btn">キャンセル</button>
+        <button id="save-btn">保存</button>
+      </div>
+    </div>
+
+    <div class="record-list" id="record-list"></div>
+    <div class="empty" id="empty-msg">まだ記録がありません</div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'farm_visits';
+
+    function load() {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    }
+    function save(records) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function formatDate(dt) {
+      if (!dt) return '';
+      const d = new Date(dt);
+      return d.toLocaleString('ja-JP', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+    }
+
+    function render() {
+      const records = load();
+      const list = document.getElementById('record-list');
+      const empty = document.getElementById('empty-msg');
+      list.innerHTML = '';
+      empty.style.display = records.length === 0 ? 'block' : 'none';
+
+      records.slice().reverse().forEach((r, revIdx) => {
+        const idx = records.length - 1 - revIdx;
+        const card = document.createElement('div');
+        card.className = 'record-card';
+
+        const photos = (r.photos || []).map(src =>
+          `<img src="${src}" alt="写真">`
+        ).join('');
+
+        card.innerHTML = `
+          <div class="meta">
+            <div>
+              <div class="producer">${r.producer || '（生産者未入力）'}</div>
+              <div class="date">${r.farm ? r.farm + '　' : ''}${formatDate(r.date)}</div>
+            </div>
+          </div>
+          ${r.crop ? `<span class="crop">${r.crop}</span>` : ''}
+          ${r.memo ? `<div class="memo">${r.memo}</div>` : ''}
+          ${photos ? `<div class="photo-preview">${photos}</div>` : ''}
+          <div class="actions">
+            <button class="danger" data-idx="${idx}">削除</button>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+
+      list.querySelectorAll('[data-idx]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!confirm('この記録を削除しますか？')) return;
+          const records = load();
+          records.splice(Number(btn.dataset.idx), 1);
+          save(records);
+          render();
+        });
+      });
+    }
+
+    document.getElementById('new-btn').addEventListener('click', () => {
+      document.getElementById('form-section').style.display = 'block';
+      document.getElementById('f-date').value = new Date().toISOString().slice(0,16);
+      document.getElementById('new-btn').style.display = 'none';
+    });
+
+    document.getElementById('cancel-btn').addEventListener('click', () => {
+      document.getElementById('form-section').style.display = 'none';
+      document.getElementById('new-btn').style.display = 'block';
+      clearForm();
+    });
+
+    function clearForm() {
+      ['f-producer','f-farm','f-date','f-crop','f-memo'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('f-photos').value = '';
+    }
+
+    document.getElementById('save-btn').addEventListener('click', async () => {
+      const producer = document.getElementById('f-producer').value.trim();
+      if (!producer) { alert('生産者名を入力してください'); return; }
+
+      const photos = await readPhotos();
+      const records = load();
+      records.push({
+        producer,
+        farm: document.getElementById('f-farm').value.trim(),
+        date: document.getElementById('f-date').value,
+        crop: document.getElementById('f-crop').value.trim(),
+        memo: document.getElementById('f-memo').value.trim(),
+        photos,
+      });
+      save(records);
+      render();
+
+      document.getElementById('form-section').style.display = 'none';
+      document.getElementById('new-btn').style.display = 'block';
+      clearForm();
+    });
+
+    function readPhotos() {
+      return new Promise(resolve => {
+        const files = document.getElementById('f-photos').files;
+        if (!files.length) { resolve([]); return; }
+        const results = [];
+        let done = 0;
+        Array.from(files).forEach((file, i) => {
+          const reader = new FileReader();
+          reader.onload = e => {
+            results[i] = e.target.result;
+            if (++done === files.length) resolve(results);
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
