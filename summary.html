@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code on the web 体験まとめ</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #f5f5f5; color: #333; line-height: 1.7; }
+    header { background: #4a7c59; color: white; padding: 24px 16px; }
+    header h1 { font-size: 1.3rem; }
+    header p { font-size: 0.85rem; opacity: 0.8; margin-top: 4px; }
+    .container { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+    h2 { font-size: 1.1rem; color: #4a7c59; border-left: 4px solid #4a7c59; padding-left: 10px; margin: 32px 0 12px; }
+    h3 { font-size: 0.95rem; color: #555; margin: 20px 0 6px; }
+    p { margin-bottom: 10px; }
+    ul { padding-left: 20px; margin-bottom: 10px; }
+    li { margin-bottom: 6px; }
+    code { background: #e8f5e9; padding: 2px 6px; border-radius: 4px; font-size: 0.9rem; font-family: monospace; }
+    .step { background: white; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .step .num { display: inline-block; background: #4a7c59; color: white; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-size: 0.8rem; margin-right: 8px; }
+    .tag { display: inline-block; background: #e8f5e9; color: #4a7c59; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; margin: 2px; }
+    .note { background: #fff8e1; border-left: 4px solid #f9a825; padding: 12px 16px; border-radius: 4px; font-size: 0.9rem; margin: 12px 0; }
+    a { color: #4a7c59; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Claude Code on the web 体験まとめ</h1>
+    <p>農家訪問記録アプリを作りながら on the web を試した記録</p>
+  </header>
+
+  <div class="container">
+
+    <h2>やったこと概要</h2>
+    <p>Claude Code on the web（<a href="https://claude.ai/code">claude.ai/code</a>）を使って、農業従事者向けの訪問記録アプリをゼロから作成。あわせて GitHub Pages で公開するまでの流れを体験した。</p>
+
+    <h2>ステップごとの記録</h2>
+
+    <div class="step">
+      <span class="num">1</span><strong>セッションスタートフックの設定</strong>
+      <p style="margin-top:8px">on the web でセッションを開始したとき自動で実行されるスクリプトを作成。依存関係のインストールなどをここに書いておくことで、毎セッション環境が整った状態で始められる。</p>
+      <ul>
+        <li><code>.claude/hooks/session-start.sh</code> を作成</li>
+        <li><code>.claude/settings.json</code> に SessionStart フックとして登録</li>
+        <li>今回のリポジトリは空だったため、フックの中身は最小限（リモート環境チェックのみ）</li>
+      </ul>
+      <span class="tag">SessionStart hook</span>
+      <span class="tag">.claude/settings.json</span>
+    </div>
+
+    <div class="step">
+      <span class="num">2</span><strong>訪問記録アプリの作成</strong>
+      <p style="margin-top:8px">HTML 1ファイル構成でシンプルに実装。バックエンド不要。</p>
+      <ul>
+        <li>生産者名・農場名・訪問日時・作物・メモ・写真を記録</li>
+        <li>データは <code>localStorage</code> に保存（ページを閉じても残る）</li>
+        <li>記録の一覧表示・削除に対応</li>
+        <li>スマホ・PC 両対応のレスポンシブデザイン</li>
+      </ul>
+      <span class="tag">HTML/CSS/JS</span>
+      <span class="tag">localStorage</span>
+      <span class="tag">レスポンシブ</span>
+    </div>
+
+    <div class="step">
+      <span class="num">3</span><strong>プレビューの確認（ハマりポイント）</strong>
+      <p style="margin-top:8px">コンテナ内で <code>python3 -m http.server 3000</code> を起動したが、on the web の UI にポートプレビュー機能が見当たらなかった。</p>
+      <div class="note">現時点では Claude Code on the web にポートのプレビューURL機能はない模様。ドキュメントにも記載なし。</div>
+      <p>→ 代替策として GitHub Pages での公開に切り替えた。</p>
+    </div>
+
+    <div class="step">
+      <span class="num">4</span><strong>GitHub Pages での公開</strong>
+      <p style="margin-top:8px"><code>index.html</code> を <code>main</code> ブランチにプッシュし、GitHub Pages を有効化した。</p>
+      <ul>
+        <li>GitHub MCP ツールで <code>main</code> ブランチへ直接プッシュ</li>
+        <li>GitHub Pages の有効化は API トークンの制限により手動で実施<br>（Settings → Pages → Branch: main / root → Save）</li>
+      </ul>
+      <p>公開URL: <a href="https://syuichi.github.io/claude-code-on-the-web-test/">https://syuichi.github.io/claude-code-on-the-web-test/</a></p>
+      <span class="tag">GitHub Pages</span>
+      <span class="tag">main ブランチ</span>
+    </div>
+
+    <h2>学んだこと・気づき</h2>
+    <ul>
+      <li><strong>セッション = コンテナ起動</strong>：on the web を開くたびにクラウドコンテナが起動し、リポジトリがクローンされる</li>
+      <li><strong>ファイルはコンテナ内に存在</strong>：<code>/home/user/</code> 以下はローカルPCではなくコンテナのパス。git push したものだけが残る</li>
+      <li><strong>localStorage のスコープ</strong>：ブラウザに保存されるためデータは端末ごとに独立。永続化・共有が必要な場合は Supabase 等の外部サービスが必要</li>
+      <li><strong>ポートプレビューは現状未対応</strong>：静的サイトの確認には GitHub Pages が現実的</li>
+      <li><strong>GitHub MCP ツール</strong>：Claude から直接 GitHub へのプッシュ・PR作成などが可能</li>
+    </ul>
+
+    <h2>リンク</h2>
+    <ul>
+      <li><a href="./index.html">農家訪問記録アプリ</a></li>
+      <li><a href="https://github.com/syuichi/claude-code-on-the-web-test">GitHub リポジトリ</a></li>
+      <li><a href="https://code.claude.com/docs/en/claude-code-on-the-web">Claude Code on the web ドキュメント</a></li>
+    </ul>
+
+  </div>
+</body>
+</html>
