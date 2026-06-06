@@ -38,6 +38,7 @@
       background: #c0392b;
     }
 
+    /* フォーム */
     .form-card {
       background: white;
       border-radius: 8px;
@@ -60,6 +61,7 @@
     .form-group textarea { height: 80px; resize: vertical; }
     .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 
+    /* 記録一覧 */
     .record-list { display: flex; flex-direction: column; gap: 12px; }
     .record-card {
       background: white;
@@ -112,6 +114,7 @@
   <div class="container">
     <button id="new-btn">＋ 新しい訪問を記録</button>
 
+    <!-- 入力フォーム -->
     <div class="form-card" id="form-section" style="display:none;">
       <h2 id="form-title">訪問記録を追加</h2>
       <div class="form-group">
@@ -144,6 +147,7 @@
       </div>
     </div>
 
+    <!-- 記録一覧 -->
     <div class="record-list" id="record-list"></div>
     <div class="empty" id="empty-msg">まだ記録がありません</div>
   </div>
@@ -208,6 +212,7 @@
       });
     }
 
+    // フォーム表示
     document.getElementById('new-btn').addEventListener('click', () => {
       document.getElementById('form-section').style.display = 'block';
       document.getElementById('f-date').value = new Date().toISOString().slice(0,16);
@@ -227,6 +232,7 @@
       document.getElementById('f-photos').value = '';
     }
 
+    // 保存
     document.getElementById('save-btn').addEventListener('click', async () => {
       const producer = document.getElementById('f-producer').value.trim();
       if (!producer) { alert('生産者名を入力してください'); return; }
