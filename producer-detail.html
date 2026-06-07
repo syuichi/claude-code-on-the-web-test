@@ -26,82 +26,64 @@
     </div>
   </div>
 
+  <a class="fab" id="fab" aria-label="この生産者を記録">＋</a>
+
   <nav class="tabbar">
     <a href="index.html"><span class="ic">📋</span>訪問記録</a>
     <a href="producers.html" class="active"><span class="ic">🧑‍🌾</span>生産者</a>
   </nav>
 
-  <div class="lightbox" id="lightbox">
-    <span class="close" id="lb-close">✕</span>
-    <img id="lb-img" src="" alt="">
-  </div>
-
+  <script src="app.js"></script>
   <script>
     const name = new URLSearchParams(location.search).get('name') || '';
-    const producers = JSON.parse(localStorage.getItem('farm_producers') || '[]');
-    const producer = producers.find(p => p.name === name);
+    const producer = Store.producers().find(p => p.name === name);
 
     document.getElementById('p-name').textContent = name;
     document.title = `${name} の訪問履歴`;
     if (producer) document.getElementById('p-sub').textContent =
       [producer.farm, producer.crop].filter(Boolean).join('・');
 
-    const fmt = dt => dt ? new Date(dt).toLocaleString('ja-JP',
-      { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', weekday:'short' }) : '';
+    document.getElementById('fab').href = `editor.html?producer=${encodeURIComponent(name)}`;
 
     function render() {
-      const visits = JSON.parse(localStorage.getItem('farm_visits') || '[]')
-        .map((v,i) => ({ ...v, _idx:i })).filter(v => v.producer === name).reverse();
+      const visits = Store.visitsFor(name).slice().reverse();
       const list = document.getElementById('list');
       const empty = document.getElementById('empty');
       list.innerHTML = '';
       empty.style.display = visits.length ? 'none' : 'block';
 
       visits.forEach(v => {
-        const card = document.createElement('div');
+        const card = document.createElement('a');
         card.className = 'card';
+        card.href = `editor.html?id=${encodeURIComponent(v.id)}`;
+        card.style.cssText = 'text-decoration:none;color:inherit;display:block';
+
         let photoHtml = '';
         if (v.photos && v.photos.length) {
           const n = Math.min(v.photos.length, 3);
-          photoHtml = `<div class="photos n${n}">${v.photos.map(s =>
-            `<img src="${s}" data-src="${s}" alt="写真">`).join('')}</div>`;
+          photoHtml = `<div class="photos n${n}">${v.photos.slice(0,3).map(s =>
+            `<img src="${s}" alt="写真">`).join('')}</div>`;
         }
+        const excerpt = v.memo && v.memo.length > 140 ? v.memo.slice(0, 140) + '…' : v.memo;
+
         card.innerHTML = `
           <div class="head">
-            <div class="date">${fmt(v.date)}</div>
-            <button class="btn danger-text" data-idx="${v._idx}">削除</button>
+            <div class="date">${fmtFull(v.date)}</div>
+            <span class="chev" style="color:var(--text-3);font-size:1.2rem">›</span>
           </div>
-          ${v.crop ? `<div><span class="chip">${v.crop}</span></div>` : ''}
-          ${v.memo ? `<div class="memo">${v.memo}</div>` : ''}
+          ${v.crop ? `<div><span class="chip">${escapeHtml(v.crop)}</span></div>` : ''}
+          ${excerpt ? `<div class="memo">${escapeHtml(excerpt)}</div>` : ''}
           ${photoHtml}
         `;
         list.appendChild(card);
       });
-
-      list.querySelectorAll('[data-idx]').forEach(b => b.onclick = () => {
-        if (!confirm('この記録を削除しますか？')) return;
-        const all = JSON.parse(localStorage.getItem('farm_visits') || '[]');
-        all.splice(+b.dataset.idx, 1);
-        localStorage.setItem('farm_visits', JSON.stringify(all));
-        render();
-      });
-      list.querySelectorAll('.photos img').forEach(img =>
-        img.onclick = () => openLightbox(img.dataset.src));
     }
 
     document.getElementById('del-producer').onclick = () => {
       if (!confirm(`「${name}」を削除しますか？\n（訪問記録は残ります）`)) return;
-      const d = producers.filter(p => p.name !== name);
-      localStorage.setItem('farm_producers', JSON.stringify(d));
+      Store.saveProducers(Store.producers().filter(p => p.name !== name));
       location.href = 'producers.html';
     };
-
-    function openLightbox(src) {
-      document.getElementById('lb-img').src = src;
-      document.getElementById('lightbox').classList.add('open');
-    }
-    document.getElementById('lb-close').onclick = () => document.getElementById('lightbox').classList.remove('open');
-    document.getElementById('lightbox').onclick = e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); };
 
     render();
   </script>

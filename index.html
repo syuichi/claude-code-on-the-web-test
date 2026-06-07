@@ -9,11 +9,8 @@
 <body>
   <div class="app">
     <div class="topbar">
-      <div style="flex:1">
-        <h1>訪問記録</h1>
-      </div>
+      <div style="flex:1"><h1>訪問記録</h1></div>
     </div>
-
     <div class="content">
       <div class="list" id="list"></div>
       <div class="empty" id="empty">
@@ -23,209 +20,54 @@
     </div>
   </div>
 
-  <button class="fab" id="fab" aria-label="記録を追加">＋</button>
+  <a class="fab" id="fab" href="editor.html" aria-label="記録を追加">＋</a>
 
   <nav class="tabbar">
     <a href="index.html" class="active"><span class="ic">📋</span>訪問記録</a>
     <a href="producers.html"><span class="ic">🧑‍🌾</span>生産者</a>
   </nav>
 
-  <!-- 入力シート -->
-  <div class="scrim" id="scrim"></div>
-  <div class="sheet" id="sheet">
-    <div class="grab"></div>
-    <div class="sheet-head">
-      <span class="t">新しい訪問記録</span>
-      <button class="x" id="sheet-close">✕</button>
-    </div>
-    <div class="sheet-body">
-      <div class="field">
-        <div class="lab">生産者</div>
-        <div class="pills" id="pills"></div>
-      </div>
-      <div class="field">
-        <div class="lab">訪問日時</div>
-        <input type="datetime-local" class="inline-input" id="f-date">
-      </div>
-      <div class="field">
-        <div class="lab">作物・品目</div>
-        <input type="text" class="inline-input" id="f-crop" placeholder="例：トマト、イチゴ">
-      </div>
-      <div class="field">
-        <div class="lab">メモ・所見</div>
-        <textarea class="inline-area" id="f-memo" rows="1" placeholder="気づいたこと、相談内容など…"></textarea>
-      </div>
-      <div class="field">
-        <div class="lab">写真</div>
-        <div class="photo-edit" id="photo-edit">
-          <button class="add" id="photo-add">＋</button>
-        </div>
-        <input type="file" id="f-photos" accept="image/*" multiple hidden>
-      </div>
-    </div>
-    <div class="sheet-foot">
-      <button class="btn block" id="save">保存する</button>
-    </div>
-  </div>
-
-  <div class="lightbox" id="lightbox">
-    <span class="close" id="lb-close">✕</span>
-    <img id="lb-img" src="" alt="">
-  </div>
-
+  <script src="app.js"></script>
   <script>
-    const VISIT_KEY = 'farm_visits';
-    const PRODUCER_KEY = 'farm_producers';
-    const loadVisits = () => JSON.parse(localStorage.getItem(VISIT_KEY) || '[]');
-    const saveVisits = d => localStorage.setItem(VISIT_KEY, JSON.stringify(d));
-    const loadProducers = () => JSON.parse(localStorage.getItem(PRODUCER_KEY) || '[]');
-
-    let selectedProducer = '';
-    let pendingPhotos = [];
-
-    const fmt = dt => dt ? new Date(dt).toLocaleString('ja-JP',
-      { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', weekday:'short' }) : '';
-
-    /* ---- list render ---- */
     function render() {
-      const visits = loadVisits();
+      const visits = Store.visits();
       const list = document.getElementById('list');
       const empty = document.getElementById('empty');
       list.innerHTML = '';
       empty.style.display = visits.length ? 'none' : 'block';
 
-      visits.slice().reverse().forEach((r, rev) => {
-        const idx = visits.length - 1 - rev;
-        const card = document.createElement('div');
+      visits.slice().reverse().forEach(r => {
+        const card = document.createElement('a');
         card.className = 'card';
+        card.href = `editor.html?id=${encodeURIComponent(r.id)}`;
+        card.style.textDecoration = 'none';
+        card.style.color = 'inherit';
+        card.style.display = 'block';
+
         let photoHtml = '';
         if (r.photos && r.photos.length) {
           const n = Math.min(r.photos.length, 3);
-          photoHtml = `<div class="photos n${n}">${r.photos.map(s =>
-            `<img src="${s}" data-src="${s}" alt="写真">`).join('')}</div>`;
+          photoHtml = `<div class="photos n${n}">${r.photos.slice(0,3).map(s =>
+            `<img src="${s}" alt="写真">`).join('')}</div>`;
         }
+        // メモは長文になりうるので一覧では先頭を抜粋
+        const excerpt = r.memo && r.memo.length > 140 ? r.memo.slice(0, 140) + '…' : r.memo;
+
         card.innerHTML = `
           <div class="head">
             <div>
-              <div class="title">${r.producer || '（生産者未選択）'}</div>
-              <div class="date">${fmt(r.date)}</div>
+              <div class="title">${escapeHtml(r.producer) || '（生産者未選択）'}</div>
+              <div class="date">${fmtFull(r.date)}</div>
             </div>
-            <button class="btn danger-text" data-idx="${idx}">削除</button>
+            <span class="chev" style="color:var(--text-3);font-size:1.2rem">›</span>
           </div>
-          ${r.crop ? `<div><span class="chip">${r.crop}</span></div>` : ''}
-          ${r.memo ? `<div class="memo">${r.memo}</div>` : ''}
+          ${r.crop ? `<div><span class="chip">${escapeHtml(r.crop)}</span></div>` : ''}
+          ${excerpt ? `<div class="memo">${escapeHtml(excerpt)}</div>` : ''}
           ${photoHtml}
         `;
         list.appendChild(card);
       });
-
-      list.querySelectorAll('[data-idx]').forEach(b => b.onclick = () => {
-        if (!confirm('この記録を削除しますか？')) return;
-        const d = loadVisits(); d.splice(+b.dataset.idx, 1); saveVisits(d); render();
-      });
-      list.querySelectorAll('.photos img').forEach(img =>
-        img.onclick = () => openLightbox(img.dataset.src));
     }
-
-    /* ---- sheet ---- */
-    const scrim = document.getElementById('scrim');
-    const sheet = document.getElementById('sheet');
-
-    function openSheet() {
-      buildPills();
-      pendingPhotos = [];
-      renderPhotoEdit();
-      document.getElementById('f-date').value = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
-      document.getElementById('f-crop').value = '';
-      document.getElementById('f-memo').value = '';
-      autoGrow(document.getElementById('f-memo'));
-      scrim.classList.add('open');
-      sheet.classList.add('open');
-    }
-    function closeSheet() { scrim.classList.remove('open'); sheet.classList.remove('open'); }
-
-    document.getElementById('fab').onclick = openSheet;
-    document.getElementById('sheet-close').onclick = closeSheet;
-    scrim.onclick = closeSheet;
-
-    function buildPills() {
-      const producers = loadProducers();
-      const wrap = document.getElementById('pills');
-      selectedProducer = '';
-      if (!producers.length) {
-        wrap.innerHTML = `<div class="pills-empty">先に<a href="producers.html">生産者を登録</a>してください</div>`;
-        return;
-      }
-      wrap.innerHTML = '';
-      producers.forEach((p, i) => {
-        const pill = document.createElement('button');
-        pill.className = 'pill';
-        pill.textContent = p.farm ? `${p.name}（${p.farm}）` : p.name;
-        pill.onclick = () => {
-          wrap.querySelectorAll('.pill').forEach(x => x.classList.remove('on'));
-          pill.classList.add('on');
-          selectedProducer = p.name;
-        };
-        if (i === 0) { pill.classList.add('on'); selectedProducer = p.name; }
-        wrap.appendChild(pill);
-      });
-    }
-
-    /* ---- photos ---- */
-    document.getElementById('photo-add').onclick = () => document.getElementById('f-photos').click();
-    document.getElementById('f-photos').onchange = e => {
-      const files = Array.from(e.target.files);
-      let done = 0;
-      if (!files.length) return;
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = ev => { pendingPhotos.push(ev.target.result); if (++done === files.length) renderPhotoEdit(); };
-        reader.readAsDataURL(file);
-      });
-      e.target.value = '';
-    };
-    function renderPhotoEdit() {
-      const wrap = document.getElementById('photo-edit');
-      wrap.querySelectorAll('.thumb').forEach(t => t.remove());
-      const addBtn = document.getElementById('photo-add');
-      pendingPhotos.forEach((src, i) => {
-        const t = document.createElement('div');
-        t.className = 'thumb';
-        t.innerHTML = `<img src="${src}"><button class="del" data-i="${i}">✕</button>`;
-        t.querySelector('.del').onclick = () => { pendingPhotos.splice(i,1); renderPhotoEdit(); };
-        wrap.insertBefore(t, addBtn);
-      });
-    }
-
-    /* ---- save ---- */
-    document.getElementById('save').onclick = () => {
-      if (!selectedProducer) { alert('生産者を選択してください'); return; }
-      const d = loadVisits();
-      d.push({
-        producer: selectedProducer,
-        date: document.getElementById('f-date').value,
-        crop: document.getElementById('f-crop').value.trim(),
-        memo: document.getElementById('f-memo').value.trim(),
-        photos: pendingPhotos.slice(),
-      });
-      saveVisits(d);
-      closeSheet();
-      render();
-    };
-
-    /* ---- memo autogrow ---- */
-    const memo = document.getElementById('f-memo');
-    const autoGrow = el => { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; };
-    memo.addEventListener('input', () => autoGrow(memo));
-
-    /* ---- lightbox ---- */
-    function openLightbox(src) {
-      document.getElementById('lb-img').src = src;
-      document.getElementById('lightbox').classList.add('open');
-    }
-    document.getElementById('lb-close').onclick = () => document.getElementById('lightbox').classList.remove('open');
-    document.getElementById('lightbox').onclick = e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); };
-
     render();
   </script>
 </body>

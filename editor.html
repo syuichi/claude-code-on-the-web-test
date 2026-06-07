@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+  <title>訪問記録</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body class="editor-page">
+  <div class="editor-bar">
+    <a href="#" class="back" id="back">‹</a>
+    <span class="spacer"></span>
+    <span class="saved" id="saved-ind"></span>
+    <button class="btn danger-text" id="del-btn" style="display:none">削除</button>
+  </div>
+
+  <div class="doc">
+    <input type="datetime-local" class="doc-date" id="f-date">
+
+    <div class="props">
+      <div class="prop" style="align-items:flex-start">
+        <div class="key"><span class="ic">🧑‍🌾</span>生産者</div>
+        <div class="val"><div class="prop-pills" id="pills"></div></div>
+      </div>
+      <div class="prop">
+        <div class="key"><span class="ic">🌾</span>作物</div>
+        <div class="val"><input type="text" id="f-crop" placeholder="未設定"></div>
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <textarea class="doc-body" id="f-memo"
+      placeholder="今日の訪問について書く…&#10;&#10;作物の様子、相談されたこと、次回までの宿題など、日記のように自由に。"></textarea>
+
+    <div class="doc-photos">
+      <div class="lab">写真</div>
+      <div class="photo-edit" id="photo-edit">
+        <button class="add" id="photo-add">＋</button>
+      </div>
+      <input type="file" id="f-photos" accept="image/*" multiple hidden>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    let id = params.get('id');
+    const presetProducer = params.get('producer');
+    const isNew = !id;
+
+    // 編集対象を取得 or 新規作成
+    let visit = id ? Store.getVisit(id) : null;
+    if (!visit) {
+      id = Store.genId();
+      visit = { id, producer: presetProducer || '', date: localNow(), crop: '', memo: '', photos: [] };
+    }
+    let photos = (visit.photos || []).slice();
+    let selectedProducer = visit.producer || '';
+
+    // 削除ボタンは既存記録 or 何か入力済みのときに出す
+    const delBtn = document.getElementById('del-btn');
+    if (!isNew) delBtn.style.display = '';
+
+    // 初期値
+    document.getElementById('f-date').value = visit.date || localNow();
+    document.getElementById('f-crop').value = visit.crop || '';
+    const memo = document.getElementById('f-memo');
+    memo.value = visit.memo || '';
+
+    /* ---- 生産者ピル ---- */
+    function buildPills() {
+      const producers = Store.producers();
+      const wrap = document.getElementById('pills');
+      wrap.innerHTML = '';
+      if (!producers.length) {
+        wrap.innerHTML = `<div class="pills-empty">先に<a href="producers.html">生産者を登録</a></div>`;
+        return;
+      }
+      producers.forEach(p => {
+        const pill = document.createElement('button');
+        pill.className = 'pill' + (p.name === selectedProducer ? ' on' : '');
+        pill.textContent = p.farm ? `${p.name}（${p.farm}）` : p.name;
+        pill.onclick = () => {
+          selectedProducer = p.name;
+          wrap.querySelectorAll('.pill').forEach(x => x.classList.remove('on'));
+          pill.classList.add('on');
+          scheduleSave();
+        };
+        wrap.appendChild(pill);
+      });
+    }
+    buildPills();
+
+    /* ---- 写真 ---- */
+    document.getElementById('photo-add').onclick = () => document.getElementById('f-photos').click();
+    document.getElementById('f-photos').onchange = e => {
+      const files = Array.from(e.target.files); let done = 0;
+      if (!files.length) return;
+      files.forEach(file => {
+        const r = new FileReader();
+        r.onload = ev => { photos.push(ev.target.result); if (++done === files.length) { renderPhotos(); scheduleSave(); } };
+        r.readAsDataURL(file);
+      });
+      e.target.value = '';
+    };
+    function renderPhotos() {
+      const wrap = document.getElementById('photo-edit');
+      wrap.querySelectorAll('.thumb').forEach(t => t.remove());
+      const addBtn = document.getElementById('photo-add');
+      photos.forEach((src, i) => {
+        const t = document.createElement('div');
+        t.className = 'thumb';
+        t.innerHTML = `<img src="${src}"><button class="del">✕</button>`;
+        t.querySelector('.del').onclick = () => { photos.splice(i, 1); renderPhotos(); scheduleSave(); };
+        wrap.insertBefore(t, addBtn);
+      });
+    }
+    renderPhotos();
+
+    /* ---- 本文オートグロー ---- */
+    const grow = () => { memo.style.height = 'auto'; memo.style.height = Math.max(memo.scrollHeight, window.innerHeight * 0.4) + 'px'; };
+    memo.addEventListener('input', () => { grow(); scheduleSave(); });
+    grow();
+
+    /* ---- 自動保存 ---- */
+    document.getElementById('f-crop').addEventListener('input', scheduleSave);
+    document.getElementById('f-date').addEventListener('change', scheduleSave);
+
+    let saveTimer = null;
+    const ind = document.getElementById('saved-ind');
+    function scheduleSave() {
+      ind.textContent = '編集中…';
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(commit, 600);
+    }
+    function isEmpty() {
+      return !selectedProducer && !document.getElementById('f-crop').value.trim()
+        && !memo.value.trim() && photos.length === 0;
+    }
+    function commit() {
+      if (isEmpty()) return; // 空っぽなら保存しない
+      Store.upsertVisit({
+        id,
+        producer: selectedProducer,
+        date: document.getElementById('f-date').value,
+        crop: document.getElementById('f-crop').value.trim(),
+        memo: memo.value.trim(),
+        photos: photos.slice(),
+      });
+      ind.textContent = '保存しました';
+      delBtn.style.display = '';
+      setTimeout(() => { if (ind.textContent === '保存しました') ind.textContent = ''; }, 1500);
+    }
+
+    /* ---- 戻る（保存して戻る） ---- */
+    function goBack() {
+      clearTimeout(saveTimer);
+      commit();
+      // 生産者詳細から来た場合はそこへ戻す
+      if (presetProducer) location.href = `producer-detail.html?name=${encodeURIComponent(presetProducer)}`;
+      else if (selectedProducer && document.referrer.includes('producer-detail'))
+        location.href = `producer-detail.html?name=${encodeURIComponent(selectedProducer)}`;
+      else location.href = 'index.html';
+    }
+    document.getElementById('back').onclick = e => { e.preventDefault(); goBack(); };
+
+    /* ---- 削除 ---- */
+    delBtn.onclick = () => {
+      if (!confirm('この記録を削除しますか？')) return;
+      clearTimeout(saveTimer);
+      Store.deleteVisit(id);
+      location.href = 'index.html';
+    };
+  </script>
+</body>
+</html>
