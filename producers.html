@@ -57,12 +57,11 @@
     </div>
   </div>
 
+  <script src="app.js"></script>
   <script>
-    const KEY = 'farm_producers';
-    const load = () => JSON.parse(localStorage.getItem(KEY) || '[]');
-    const save = d => localStorage.setItem(KEY, JSON.stringify(d));
-    const countVisits = name => JSON.parse(localStorage.getItem('farm_visits') || '[]')
-      .filter(v => v.producer === name).length;
+    const load = () => Store.producers();
+    const save = d => Store.saveProducers(d);
+    const countVisits = name => Store.visitsFor(name).length;
 
     function render() {
       const producers = load();
