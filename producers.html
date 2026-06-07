@@ -68,6 +68,7 @@
     }
     .producer-card .name { font-weight: bold; }
     .producer-card .sub { font-size: 0.85rem; color: #888; margin-top: 2px; }
+    .producer-link { text-decoration: none; color: inherit; flex: 1; }
 
     .empty { text-align: center; color: #aaa; padding: 40px 0; }
     #new-btn { margin-bottom: 16px; width: 100%; }
@@ -128,10 +129,10 @@
         const card = document.createElement('div');
         card.className = 'producer-card';
         card.innerHTML = `
-          <div>
+          <a class="producer-link" href="producer-detail.html?name=${encodeURIComponent(p.name)}">
             <div class="name">${p.name}</div>
             <div class="sub">${[p.farm, p.crop].filter(Boolean).join('　')}</div>
-          </div>
+          </a>
           <button class="danger" data-idx="${idx}">削除</button>
         `;
         list.appendChild(card);
