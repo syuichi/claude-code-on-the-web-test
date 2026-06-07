@@ -2,201 +2,106 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
   <title>訪問履歴</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; background: #f5f5f5; color: #333; }
-
-    header { background: #4a7c59; color: white; padding: 16px; display: flex; align-items: center; gap: 12px; }
-    header a { color: white; text-decoration: none; font-size: 1.3rem; line-height: 1; }
-    header div { flex: 1; }
-    header h1 { font-size: 1.1rem; }
-    header p { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }
-
-    nav { background: #3a6348; display: flex; }
-    nav a { color: rgba(255,255,255,0.7); text-decoration: none; padding: 10px 20px; font-size: 0.9rem; }
-    nav a.active { color: white; border-bottom: 3px solid white; }
-
-    .container { max-width: 640px; margin: 0 auto; padding: 16px; }
-
-    .visit-card {
-      background: white;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 12px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-    }
-    .visit-card .date { font-size: 0.85rem; color: #888; margin-bottom: 8px; }
-    .visit-card .crop {
-      display: inline-block;
-      background: #e8f5e9;
-      color: #4a7c59;
-      font-size: 0.8rem;
-      padding: 2px 8px;
-      border-radius: 12px;
-      margin-bottom: 8px;
-    }
-    .visit-card .memo { font-size: 0.9rem; color: #444; white-space: pre-wrap; line-height: 1.6; }
-
-    .photo-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-      margin-top: 12px;
-    }
-    .photo-grid img {
-      width: 100%;
-      aspect-ratio: 1;
-      object-fit: cover;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .photo-grid.single img { border-radius: 8px; aspect-ratio: 16/9; }
-    .photo-grid.double { grid-template-columns: repeat(2, 1fr); }
-
-    .visit-card .actions { margin-top: 12px; display: flex; justify-content: flex-end; }
-    button.danger {
-      background: #c0392b;
-      color: white;
-      border: none;
-      padding: 6px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-    }
-
-    .empty { text-align: center; color: #aaa; padding: 60px 0; }
-
-    /* ライトボックス */
-    #lightbox {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.9);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-    #lightbox.open { display: flex; }
-    #lightbox img { max-width: 95vw; max-height: 90vh; border-radius: 4px; }
-    #lightbox-close {
-      position: absolute;
-      top: 16px; right: 20px;
-      color: white;
-      font-size: 2rem;
-      cursor: pointer;
-      line-height: 1;
-    }
-  </style>
+  <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <header>
-    <a href="producers.html">&#8592;</a>
-    <div>
-      <h1 id="producer-name">生産者名</h1>
-      <p id="producer-sub"></p>
+  <div class="app">
+    <div class="topbar">
+      <a href="producers.html" class="back">‹</a>
+      <div style="flex:1">
+        <h1 id="p-name" style="font-size:1.2rem">生産者</h1>
+        <div class="sub" id="p-sub"></div>
+      </div>
+      <button class="btn danger-text" id="del-producer">削除</button>
     </div>
-  </header>
-  <nav>
-    <a href="index.html">訪問記録</a>
-    <a href="producers.html" class="active">生産者</a>
-  </nav>
 
-  <div class="container">
-    <div id="visit-list"></div>
-    <div class="empty" id="empty-msg">訪問記録がありません</div>
+    <div class="content">
+      <div class="list" id="list"></div>
+      <div class="empty" id="empty">
+        <div class="ic">📭</div>
+        <p>この生産者の訪問記録はまだありません</p>
+      </div>
+    </div>
   </div>
 
-  <div id="lightbox">
-    <span id="lightbox-close">&times;</span>
-    <img id="lightbox-img" src="" alt="">
+  <nav class="tabbar">
+    <a href="index.html"><span class="ic">📋</span>訪問記録</a>
+    <a href="producers.html" class="active"><span class="ic">🧑‍🌾</span>生産者</a>
+  </nav>
+
+  <div class="lightbox" id="lightbox">
+    <span class="close" id="lb-close">✕</span>
+    <img id="lb-img" src="" alt="">
   </div>
 
   <script>
-    const params = new URLSearchParams(location.search);
-    const producerName = params.get('name') || '';
-
+    const name = new URLSearchParams(location.search).get('name') || '';
     const producers = JSON.parse(localStorage.getItem('farm_producers') || '[]');
-    const producer = producers.find(p => p.name === producerName);
+    const producer = producers.find(p => p.name === name);
 
-    document.getElementById('producer-name').textContent = producerName;
-    if (producer) {
-      const sub = [producer.farm, producer.crop].filter(Boolean).join('　');
-      document.getElementById('producer-sub').textContent = sub;
-    }
-    document.title = `${producerName} の訪問履歴`;
+    document.getElementById('p-name').textContent = name;
+    document.title = `${name} の訪問履歴`;
+    if (producer) document.getElementById('p-sub').textContent =
+      [producer.farm, producer.crop].filter(Boolean).join('・');
 
-    function formatDate(dt) {
-      if (!dt) return '';
-      return new Date(dt).toLocaleString('ja-JP', {
-        year: 'numeric', month: 'long', day: 'numeric',
-        hour: '2-digit', minute: '2-digit', weekday: 'short'
-      });
-    }
+    const fmt = dt => dt ? new Date(dt).toLocaleString('ja-JP',
+      { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', weekday:'short' }) : '';
 
     function render() {
-      const visits = JSON.parse(localStorage.getItem('farm_visits') || '[]');
-      const filtered = visits
-        .map((v, idx) => ({ ...v, _idx: idx }))
-        .filter(v => v.producer === producerName)
-        .reverse();
-
-      const list = document.getElementById('visit-list');
-      const empty = document.getElementById('empty-msg');
+      const visits = JSON.parse(localStorage.getItem('farm_visits') || '[]')
+        .map((v,i) => ({ ...v, _idx:i })).filter(v => v.producer === name).reverse();
+      const list = document.getElementById('list');
+      const empty = document.getElementById('empty');
       list.innerHTML = '';
-      empty.style.display = filtered.length === 0 ? 'block' : 'none';
+      empty.style.display = visits.length ? 'none' : 'block';
 
-      filtered.forEach(v => {
+      visits.forEach(v => {
         const card = document.createElement('div');
-        card.className = 'visit-card';
-
+        card.className = 'card';
         let photoHtml = '';
-        if (v.photos && v.photos.length > 0) {
-          const gridClass = v.photos.length === 1 ? 'single' : v.photos.length === 2 ? 'double' : '';
-          const imgs = v.photos.map(src =>
-            `<img src="${src}" alt="写真" data-src="${src}">`
-          ).join('');
-          photoHtml = `<div class="photo-grid ${gridClass}">${imgs}</div>`;
+        if (v.photos && v.photos.length) {
+          const n = Math.min(v.photos.length, 3);
+          photoHtml = `<div class="photos n${n}">${v.photos.map(s =>
+            `<img src="${s}" data-src="${s}" alt="写真">`).join('')}</div>`;
         }
-
         card.innerHTML = `
-          <div class="date">${formatDate(v.date)}</div>
-          ${v.crop ? `<div><span class="crop">${v.crop}</span></div>` : ''}
+          <div class="head">
+            <div class="date">${fmt(v.date)}</div>
+            <button class="btn danger-text" data-idx="${v._idx}">削除</button>
+          </div>
+          ${v.crop ? `<div><span class="chip">${v.crop}</span></div>` : ''}
           ${v.memo ? `<div class="memo">${v.memo}</div>` : ''}
           ${photoHtml}
-          <div class="actions">
-            <button class="danger" data-idx="${v._idx}">削除</button>
-          </div>
         `;
         list.appendChild(card);
       });
 
-      list.querySelectorAll('[data-idx]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (!confirm('この記録を削除しますか？')) return;
-          const all = JSON.parse(localStorage.getItem('farm_visits') || '[]');
-          all.splice(Number(btn.dataset.idx), 1);
-          localStorage.setItem('farm_visits', JSON.stringify(all));
-          render();
-        });
+      list.querySelectorAll('[data-idx]').forEach(b => b.onclick = () => {
+        if (!confirm('この記録を削除しますか？')) return;
+        const all = JSON.parse(localStorage.getItem('farm_visits') || '[]');
+        all.splice(+b.dataset.idx, 1);
+        localStorage.setItem('farm_visits', JSON.stringify(all));
+        render();
       });
-
-      list.querySelectorAll('.photo-grid img').forEach(img => {
-        img.addEventListener('click', () => openLightbox(img.dataset.src));
-      });
+      list.querySelectorAll('.photos img').forEach(img =>
+        img.onclick = () => openLightbox(img.dataset.src));
     }
+
+    document.getElementById('del-producer').onclick = () => {
+      if (!confirm(`「${name}」を削除しますか？\n（訪問記録は残ります）`)) return;
+      const d = producers.filter(p => p.name !== name);
+      localStorage.setItem('farm_producers', JSON.stringify(d));
+      location.href = 'producers.html';
+    };
 
     function openLightbox(src) {
-      document.getElementById('lightbox-img').src = src;
+      document.getElementById('lb-img').src = src;
       document.getElementById('lightbox').classList.add('open');
     }
-    document.getElementById('lightbox-close').addEventListener('click', () => {
-      document.getElementById('lightbox').classList.remove('open');
-    });
-    document.getElementById('lightbox').addEventListener('click', e => {
-      if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
-    });
+    document.getElementById('lb-close').onclick = () => document.getElementById('lightbox').classList.remove('open');
+    document.getElementById('lightbox').onclick = e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); };
 
     render();
   </script>

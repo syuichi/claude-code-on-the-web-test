@@ -2,184 +2,120 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>生産者管理</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; background: #f5f5f5; color: #333; }
-
-    header { background: #4a7c59; color: white; padding: 16px; }
-    header h1 { font-size: 1.2rem; }
-
-    nav { background: #3a6348; display: flex; }
-    nav a {
-      color: rgba(255,255,255,0.7);
-      text-decoration: none;
-      padding: 10px 20px;
-      font-size: 0.9rem;
-    }
-    nav a.active { color: white; border-bottom: 3px solid white; }
-
-    .container { max-width: 640px; margin: 0 auto; padding: 16px; }
-
-    button {
-      background: #4a7c59;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-    button:hover { background: #3a6348; }
-    button.secondary { background: #999; }
-    button.secondary:hover { background: #777; }
-    button.danger { background: #c0392b; }
-
-    .form-card {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-    }
-    .form-card h2 { margin-bottom: 16px; font-size: 1rem; color: #555; }
-    .form-group { margin-bottom: 14px; }
-    .form-group label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 4px; }
-    .form-group input, .form-group textarea {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 1rem;
-    }
-    .form-group textarea { height: 60px; resize: vertical; }
-    .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
-
-    .producer-list { display: flex; flex-direction: column; gap: 12px; }
-    .producer-card {
-      background: white;
-      border-radius: 8px;
-      padding: 16px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .producer-card .name { font-weight: bold; }
-    .producer-card .sub { font-size: 0.85rem; color: #888; margin-top: 2px; }
-    .producer-link { text-decoration: none; color: inherit; flex: 1; }
-
-    .empty { text-align: center; color: #aaa; padding: 40px 0; }
-    #new-btn { margin-bottom: 16px; width: 100%; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+  <title>生産者</title>
+  <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <header><h1>農家訪問記録</h1></header>
-  <nav>
-    <a href="index.html">訪問記録</a>
-    <a href="producers.html" class="active">生産者</a>
-  </nav>
-
-  <div class="container">
-    <button id="new-btn">＋ 生産者を登録</button>
-
-    <div class="form-card" id="form-section" style="display:none;">
-      <h2>生産者を登録</h2>
-      <div class="form-group">
-        <label>生産者名 *</label>
-        <input type="text" id="f-name" placeholder="例：田中 一郎">
-      </div>
-      <div class="form-group">
-        <label>農場名</label>
-        <input type="text" id="f-farm" placeholder="例：田中農園">
-      </div>
-      <div class="form-group">
-        <label>主な作物</label>
-        <input type="text" id="f-crop" placeholder="例：トマト、イチゴ">
-      </div>
-      <div class="form-group">
-        <label>メモ</label>
-        <textarea id="f-memo" placeholder="住所や連絡先など"></textarea>
-      </div>
-      <div class="form-actions">
-        <button class="secondary" id="cancel-btn">キャンセル</button>
-        <button id="save-btn">登録</button>
+  <div class="app">
+    <div class="topbar">
+      <div style="flex:1"><h1>生産者</h1></div>
+    </div>
+    <div class="content">
+      <div class="list" id="list"></div>
+      <div class="empty" id="empty">
+        <div class="ic">🧑‍🌾</div>
+        <p>生産者が登録されていません<br>右下のボタンから登録しましょう</p>
       </div>
     </div>
+  </div>
 
-    <div class="producer-list" id="producer-list"></div>
-    <div class="empty" id="empty-msg">生産者が登録されていません</div>
+  <button class="fab" id="fab" aria-label="生産者を登録">＋</button>
+
+  <nav class="tabbar">
+    <a href="index.html"><span class="ic">📋</span>訪問記録</a>
+    <a href="producers.html" class="active"><span class="ic">🧑‍🌾</span>生産者</a>
+  </nav>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet">
+    <div class="grab"></div>
+    <div class="sheet-head">
+      <span class="t">生産者を登録</span>
+      <button class="x" id="sheet-close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field">
+        <div class="lab">生産者名</div>
+        <input type="text" class="inline-input" id="f-name" placeholder="例：田中 一郎">
+      </div>
+      <div class="field">
+        <div class="lab">農場名</div>
+        <input type="text" class="inline-input" id="f-farm" placeholder="例：田中農園">
+      </div>
+      <div class="field">
+        <div class="lab">主な作物</div>
+        <input type="text" class="inline-input" id="f-crop" placeholder="例：トマト、イチゴ">
+      </div>
+      <div class="field">
+        <div class="lab">メモ</div>
+        <textarea class="inline-area" id="f-memo" rows="1" placeholder="住所や連絡先など…"></textarea>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn block" id="save">登録する</button>
+    </div>
   </div>
 
   <script>
     const KEY = 'farm_producers';
-
-    function load() { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
-    function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
+    const load = () => JSON.parse(localStorage.getItem(KEY) || '[]');
+    const save = d => localStorage.setItem(KEY, JSON.stringify(d));
+    const countVisits = name => JSON.parse(localStorage.getItem('farm_visits') || '[]')
+      .filter(v => v.producer === name).length;
 
     function render() {
       const producers = load();
-      const list = document.getElementById('producer-list');
-      const empty = document.getElementById('empty-msg');
+      const list = document.getElementById('list');
+      const empty = document.getElementById('empty');
       list.innerHTML = '';
-      empty.style.display = producers.length === 0 ? 'block' : 'none';
+      empty.style.display = producers.length ? 'none' : 'block';
 
       producers.forEach((p, idx) => {
-        const card = document.createElement('div');
-        card.className = 'producer-card';
-        card.innerHTML = `
-          <a class="producer-link" href="producer-detail.html?name=${encodeURIComponent(p.name)}">
+        const n = countVisits(p.name);
+        const row = document.createElement('a');
+        row.className = 'row';
+        row.href = `producer-detail.html?name=${encodeURIComponent(p.name)}`;
+        row.innerHTML = `
+          <div class="avatar">${(p.name || '?').slice(0,1)}</div>
+          <div class="body">
             <div class="name">${p.name}</div>
-            <div class="sub">${[p.farm, p.crop].filter(Boolean).join('　')}</div>
-          </a>
-          <button class="danger" data-idx="${idx}">削除</button>
+            <div class="sub">${[p.farm, p.crop].filter(Boolean).join('・') || '—'}</div>
+          </div>
+          ${n ? `<span class="count">${n}回</span>` : ''}
+          <span class="chev">›</span>
         `;
-        list.appendChild(card);
-      });
-
-      list.querySelectorAll('[data-idx]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (!confirm('この生産者を削除しますか？')) return;
-          const data = load();
-          data.splice(Number(btn.dataset.idx), 1);
-          save(data);
-          render();
-        });
+        list.appendChild(row);
       });
     }
 
-    document.getElementById('new-btn').addEventListener('click', () => {
-      document.getElementById('form-section').style.display = 'block';
-      document.getElementById('new-btn').style.display = 'none';
-    });
-
-    document.getElementById('cancel-btn').addEventListener('click', () => {
-      document.getElementById('form-section').style.display = 'none';
-      document.getElementById('new-btn').style.display = 'block';
-      clearForm();
-    });
-
-    function clearForm() {
+    /* sheet */
+    const scrim = document.getElementById('scrim');
+    const sheet = document.getElementById('sheet');
+    function openSheet() {
       ['f-name','f-farm','f-crop','f-memo'].forEach(id => document.getElementById(id).value = '');
+      scrim.classList.add('open'); sheet.classList.add('open');
     }
+    function closeSheet() { scrim.classList.remove('open'); sheet.classList.remove('open'); }
+    document.getElementById('fab').onclick = openSheet;
+    document.getElementById('sheet-close').onclick = closeSheet;
+    scrim.onclick = closeSheet;
 
-    document.getElementById('save-btn').addEventListener('click', () => {
+    const memo = document.getElementById('f-memo');
+    memo.addEventListener('input', () => { memo.style.height='auto'; memo.style.height = memo.scrollHeight+'px'; });
+
+    document.getElementById('save').onclick = () => {
       const name = document.getElementById('f-name').value.trim();
       if (!name) { alert('生産者名を入力してください'); return; }
-      const data = load();
-      data.push({
+      const d = load();
+      d.push({
         name,
         farm: document.getElementById('f-farm').value.trim(),
         crop: document.getElementById('f-crop').value.trim(),
         memo: document.getElementById('f-memo').value.trim(),
       });
-      save(data);
-      render();
-      document.getElementById('form-section').style.display = 'none';
-      document.getElementById('new-btn').style.display = 'block';
-      clearForm();
-    });
+      save(d); closeSheet(); render();
+    };
 
     render();
   </script>
